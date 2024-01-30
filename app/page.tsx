@@ -1,113 +1,242 @@
+"use client";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import classes from "./index.module.scss";
+
+interface Todo {
+  id: number;
+  text?: string;
+  completed: boolean;
+}
 
 export default function Home() {
+  const [darkTheme, setDarkTheme] = useState<boolean>(
+    typeof window !== "undefined" &&
+      localStorage.getItem("darkTheme") === "true"
+      ? true
+      : false
+  );
+  const [todoList, setTodoList] = useState<Array<Todo>>(
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("todoList") || "[]")
+      : []
+  );
+  const [newTask, setNewTask] = useState<string>("");
+  const [filter, setFilter] = useState<string>("all");
+
+  const [filterButtons, setFilterButtons] = useState<{
+    all: boolean;
+    active: boolean;
+    completed: boolean;
+  }>({
+    all: true,
+    active: false,
+    completed: false,
+  });
+
+  const toggleTheme = () => {
+    const newTheme = !darkTheme;
+    setDarkTheme(newTheme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("darkTheme", String(newTheme));
+    }
+  };
+
+  const addTask = () => {
+    if (newTask.trim() === "") return;
+    const newTodo: Todo = {
+      id: Date.now(),
+      text: newTask,
+      completed: false,
+    };
+    setTodoList([...todoList, newTodo]);
+    setNewTask("");
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("todoList", JSON.stringify(todoList));
+    }
+  }, [todoList]);
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      addTask();
+    }
+  };
+
+  const toggleTaskCompletion = (id: number) => {
+    const updatedTodoList = todoList.map((todo) => {
+      if (todo.id === id) {
+        return {
+          ...todo,
+          completed: !todo.completed,
+        };
+      }
+      return todo;
+    });
+    setTodoList(updatedTodoList);
+  };
+
+  const deleteTask = (id: number) => {
+    const updatedTodoList = todoList.filter((todo) => todo.id !== id);
+    setTodoList(updatedTodoList);
+  };
+
+  const handleFilter = (filter: string) => {
+    setFilter(filter);
+
+    setFilterButtons({
+      all: filter === "all",
+      active: filter === "active",
+      completed: filter === "completed",
+    });
+  };
+
+  const filterTasks = (tasks: Todo[]) => {
+    switch (filter) {
+      case "active":
+        return tasks.filter((todo) => !todo.completed);
+      case "completed":
+        return tasks.filter((todo) => todo.completed);
+      default:
+        return tasks;
+    }
+  };
+
+  const remainingTasks = filterTasks(todoList).length;
+
+  const clearList = () => {
+    const updatedTodoList = todoList.filter((todo) => !todo.completed);
+    setTodoList(updatedTodoList);
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
+    <div className={`${classes.wrap} ${darkTheme ? classes.darkBack : ""}`}>
+      <div
+        className={`${classes.wrap_img} ${darkTheme ? classes.darkBack : ""}`}
+      ></div>
+      <div className={classes.wrap_form}>
+        <div className={classes.top_bar}>
+          <h1 className={classes.title}>Todo</h1>
+          {darkTheme ? (
             <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+              src="/assets/img/icons/icon-sun.svg"
+              height={26}
+              width={26}
+              alt="Sun"
+              onClick={toggleTheme}
+              className="cursor-pointer"
             />
-          </a>
+          ) : (
+            <Image
+              src="/assets/img/icons/icon-moon.svg"
+              height={26}
+              width={26}
+              alt="Moon"
+              onClick={toggleTheme}
+              className="cursor-pointer"
+            />
+          )}
+        </div>
+        <div className={classes.wrap_input}>
+          <div
+            className={`${classes.circle} ${darkTheme ? classes.darkBack : ""}`}
+          ></div>
+          <input
+            type="text"
+            className={`${classes.input_task} ${
+              darkTheme ? classes.darkBack : ""
+            }`}
+            placeholder="Create a new to do"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            onKeyPress={handleKeyPress}
+          />
+        </div>
+        <div
+          className={`${classes.wrap_list} ${
+            darkTheme ? classes.darkBack : ""
+          }`}
+        >
+          {filterTasks(todoList).map((todo) => (
+            <div
+              className={`${classes.todo} ${
+                todo.completed ? classes.completed_line : ""
+              }
+              ${darkTheme ? classes.darkBack : ""}
+              `}
+              key={todo.id}
+            >
+              <div
+                className={`${classes.todo_circle} ${
+                  todo.completed ? classes.completed : ""
+                }
+                ${darkTheme ? classes.darkBack : ""}
+                `}
+                onClick={() => toggleTaskCompletion(todo.id)}
+              >
+                <Image
+                  src="/assets/img/icons/icon-check.svg"
+                  height={9}
+                  width={11}
+                  alt="Check"
+                />
+              </div>
+              {todo.text}
+              <Image
+                src="/assets/img/icons/icon-cross.svg"
+                height={18}
+                width={18}
+                alt="Cross"
+                className={classes.delete_btn}
+                onClick={() => deleteTask(todo.id)}
+              />
+            </div>
+          ))}
+          <div className={classes.wrap_menu_list}>
+            <div className={classes.remaining_tasks}>
+              {remainingTasks} items left
+            </div>
+            <div
+              className={`${classes.wrap_filter_btns}
+            ${darkTheme ? classes.darkBack : ""}
+            `}
+            >
+              <button
+                onClick={() => handleFilter("all")}
+                className={`${filterButtons.all ? classes.active : ""}
+              ${darkTheme ? classes.darkBack : ""}
+              `}
+              >
+                All
+              </button>
+              <button
+                onClick={() => handleFilter("active")}
+                className={`${filterButtons.active ? classes.active : ""}
+              ${darkTheme ? classes.darkBack : ""}`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => handleFilter("completed")}
+                className={`${filterButtons.completed ? classes.active : ""}
+              ${darkTheme ? classes.darkBack : ""}`}
+              >
+                Completed
+              </button>
+            </div>
+            <button
+              onClick={clearList}
+              className={`${classes.clear_btn}
+            ${darkTheme ? classes.darkBack : ""}
+            `}
+            >
+              Clear Completed
+            </button>
+          </div>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
